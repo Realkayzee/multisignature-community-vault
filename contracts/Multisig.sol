@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.8.7;
+pragma solidity 0.8.9;
 
 /// @title A Multi signature contract
 /// @author Kayzee
@@ -10,6 +10,10 @@ pragma solidity 0.8.7;
 //* Anybody can check landlord addresses that deposited to the contract
 /// @notice excos have the ability to revert their approval
 contract Multisig {
+    event Deposit(address, uint256);
+    event Initwithdrawal(uint256, uint256);
+
+//***State variables */
     address[] excoAddresses;
     uint256 excoNumber;
     error _onlyExco(string);
@@ -62,17 +66,20 @@ contract Multisig {
         }
         _;
     }
-    
+/// @dev function responsible for users(Landlord) deposit
     function deposit() public payable {
         require(msg.value > 0, "You must deposit more than 0");
         landLordBalances[msg.sender] += msg.value;
+        emit Deposit(msg.sender, msg.value);
     }
 
 /// @dev function for initiating transaction for withdrawal
+/// @param _amount as the param name
     function initWithdrawal(uint256 _amount) public onlyExco {
         require(_amount > 0, "Amount must be greate than zero");
         require(_amount < address(this).balance, "Insuficient Fund in the community Vault");
         address _exco = msg.sender;
+        uint256 _txIndex = transactions.length;
         transactions.push(
             Transaction({
                 exco: _exco,
@@ -81,13 +88,19 @@ contract Multisig {
                 executed: false
             })
         );
+        emit Initwithdrawal(_txIndex, _amount);
+
     }
 /// @dev function for approving withdrawal
+/// @param _txIndex as the index for each transaction to be approved
     function approveWithdrawal(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
         confirmed[_txIndex][msg.sender] = true;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation += 1;
     }
+
+/// @dev A function responsible for withdrawal after approval has been confirmed
+/// @param _txIndex is the location of transaction to be withdrawn 
     function withdrawal(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) {
         uint256 contractBalance = address(this).balance;
         Transaction storage trans = transactions[_txIndex];
@@ -98,27 +111,36 @@ contract Multisig {
             require(success, "Transaction failed");
         }
     }
+
+
+/// @dev Function that handles revertion of approval by excos
+/// @param _txIndex takes in the location of the transaction to be reverted 
     function revertApproval(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
         confirmed[_txIndex][msg.sender] = false;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation -= 1;
     }
 
-
+/// @dev A function for checking amount to be withdrawn by an exco
+/// @param _txIndex tracks in the transaction index of the transaction data
     function checkAmountRequest(uint256 _txIndex) public view returns(uint256){
         return transactions[_txIndex].amount;
     }
-
+/// @dev The total amount in the contract
     function AmountInCommunityVault() public view returns(uint256 ){
         return address(this).balance;
     }
-    function checkTransactionCount() public view returns(uint256) {
-        return transactions.length;
-    }
+/// @dev The total number of confirmation a particular transaction has reached
     function checkNumApproval(uint256 _txIndex) public onlyExco view returns (uint256) {
         return transactions[_txIndex].noOfConfirmation;
     }
+/// @dev The function that checks landlord deposit
     function checkLandLordDeposit(address _addr) public view returns(uint256) {
         return landLordBalances[_addr];
     }
+/// @dev The function that checks the transaction count in the contract.
+    function checkTransactionCount() public view returns(uint256) {
+        return transactions.length;
+    }
+
 }
