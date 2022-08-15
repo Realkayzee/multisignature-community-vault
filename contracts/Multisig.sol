@@ -14,7 +14,7 @@ contract Multisig {
     event Initwithdrawal(uint256, uint256);
 
 //***State variables */
-    address[] excoAddresses;
+    address[] public excoAddresses;
     uint256 excoNumber;
     error _onlyExco(string);
     error _alreadyConfirmed(string);
@@ -39,15 +39,6 @@ contract Multisig {
         excoNumber = _exconumber;
     }
 
-    modifier onlyExco {
-        for(uint256 i = 0; i < excoAddresses.length; i++){
-            if(msg.sender != excoAddresses[i]){
-                revert _onlyExco("You are not an exco");   
-            }
-        }
-        _;
-
-    }
     modifier alreadyConfirmed(uint256 _txIndex) {
         if(confirmed[_txIndex][msg.sender] == true){
             revert _alreadyConfirmed("you already approve once");
@@ -66,6 +57,15 @@ contract Multisig {
         }
         _;
     }
+
+/// @dev Function that checks for valid owners
+    function onlyExco() internal view {
+        for(uint256 i = 0; i < excoAddresses.length; i++){
+            if(msg.sender != excoAddresses[i]){
+                revert _onlyExco("You are not an exco");   
+            }
+        }
+    }
 /// @dev function responsible for users(Landlord) deposit
     function deposit() public payable {
         require(msg.value > 0, "You must deposit more than 0");
@@ -75,9 +75,10 @@ contract Multisig {
 
 /// @dev function for initiating transaction for withdrawal
 /// @param _amount as the param name
-    function initWithdrawal(uint256 _amount) public onlyExco {
+    function initWithdrawal(uint256 _amount) public {
+        onlyExco();
         require(_amount > 0, "Amount must be greate than zero");
-        require(_amount < address(this).balance, "Insuficient Fund in the community Vault");
+        require(_amount <= address(this).balance, "Insuficient Fund in the community Vault");
         address _exco = msg.sender;
         uint256 _txIndex = transactions.length;
         transactions.push(
@@ -93,7 +94,8 @@ contract Multisig {
     }
 /// @dev function for approving withdrawal
 /// @param _txIndex as the index for each transaction to be approved
-    function approveWithdrawal(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
+    function approveWithdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
+        onlyExco();
         confirmed[_txIndex][msg.sender] = true;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation += 1;
@@ -101,7 +103,8 @@ contract Multisig {
 
 /// @dev A function responsible for withdrawal after approval has been confirmed
 /// @param _txIndex is the location of transaction to be withdrawn 
-    function withdrawal(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) {
+    function withdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) {
+        onlyExco();
         uint256 contractBalance = address(this).balance;
         Transaction storage trans = transactions[_txIndex];
         if(trans.noOfConfirmation == excoNumber){
@@ -115,7 +118,8 @@ contract Multisig {
 
 /// @dev Function that handles revertion of approval by excos
 /// @param _txIndex takes in the location of the transaction to be reverted 
-    function revertApproval(uint256 _txIndex) public onlyExco alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
+    function revertApproval(uint256 _txIndex) public alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
+        onlyExco();
         confirmed[_txIndex][msg.sender] = false;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation -= 1;
@@ -131,7 +135,8 @@ contract Multisig {
         return address(this).balance;
     }
 /// @dev The total number of confirmation a particular transaction has reached
-    function checkNumApproval(uint256 _txIndex) public onlyExco view returns (uint256) {
+    function checkNumApproval(uint256 _txIndex) public view returns (uint256) {
+        onlyExco();
         return transactions[_txIndex].noOfConfirmation;
     }
 /// @dev The function that checks landlord deposit
@@ -143,4 +148,4 @@ contract Multisig {
         return transactions.length;
     }
 
-}
+}// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4","0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2","0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"] 
