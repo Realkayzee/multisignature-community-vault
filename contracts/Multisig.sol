@@ -118,4 +118,7 @@ contract Multisig {
     function checkNumApproval(uint256 _txIndex) public onlyExco view returns (uint256) {
         return transactions[_txIndex].noOfConfirmation;
     }
+    function checkLandLordDeposit(address _addr) public view returns(uint256) {
+        return landLordBalances[_addr];
+    }
 }
