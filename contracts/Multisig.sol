@@ -73,7 +73,6 @@ contract Multisig {
         require(_amount > 0, "Amount must be greate than zero");
         require(_amount < address(this).balance, "Insuficient Fund in the community Vault");
         address _exco = msg.sender;
-        uint256 txIndex = transactions.length;
         transactions.push(
             Transaction({
                 exco: _exco,
