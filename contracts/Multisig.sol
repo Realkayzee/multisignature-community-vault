@@ -16,7 +16,6 @@ contract Multisig {
 //***State variables */
     address[] public excoAddresses;
     uint256 excoNumber;
-    error _onlyExco(string);
     error _alreadyConfirmed(string);
     error _alreadyExecuted(string);
     error _notApprovedYet(string);
@@ -59,10 +58,13 @@ contract Multisig {
     }
 
 /// @dev Function that checks for valid owners
-    function onlyExco() internal view {
+    function onlyExco(address _addr) public view returns(bool a) {
         for(uint256 i = 0; i < excoAddresses.length; i++){
-            if(msg.sender != excoAddresses[i]){
-                revert _onlyExco("You are not an exco");   
+            if(_addr == excoAddresses[i]){
+                a = true;
+            }
+            else {
+                a = false;
             }
         }
     }
@@ -76,7 +78,7 @@ contract Multisig {
 /// @dev function for initiating transaction for withdrawal
 /// @param _amount as the param name
     function initWithdrawal(uint256 _amount) public {
-        onlyExco();
+        onlyExco(msg.sender);
         require(_amount > 0, "Amount must be greate than zero");
         require(_amount <= address(this).balance, "Insuficient Fund in the community Vault");
         address _exco = msg.sender;
@@ -95,7 +97,7 @@ contract Multisig {
 /// @dev function for approving withdrawal
 /// @param _txIndex as the index for each transaction to be approved
     function approveWithdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
-        onlyExco();
+        onlyExco(msg.sender);
         confirmed[_txIndex][msg.sender] = true;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation += 1;
@@ -104,7 +106,7 @@ contract Multisig {
 /// @dev A function responsible for withdrawal after approval has been confirmed
 /// @param _txIndex is the location of transaction to be withdrawn 
     function withdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) {
-        onlyExco();
+        onlyExco(msg.sender);
         uint256 contractBalance = address(this).balance;
         Transaction storage trans = transactions[_txIndex];
         if(trans.noOfConfirmation == excoNumber){
@@ -119,7 +121,7 @@ contract Multisig {
 /// @dev Function that handles revertion of approval by excos
 /// @param _txIndex takes in the location of the transaction to be reverted 
     function revertApproval(uint256 _txIndex) public alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
-        onlyExco();
+        onlyExco(msg.sender);
         confirmed[_txIndex][msg.sender] = false;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation -= 1;
@@ -136,7 +138,7 @@ contract Multisig {
     }
 /// @dev The total number of confirmation a particular transaction has reached
     function checkNumApproval(uint256 _txIndex) public view returns (uint256) {
-        onlyExco();
+        onlyExco(msg.sender);
         return transactions[_txIndex].noOfConfirmation;
     }
 /// @dev The function that checks landlord deposit
@@ -146,6 +148,10 @@ contract Multisig {
 /// @dev The function that checks the transaction count in the contract.
     function checkTransactionCount() public view returns(uint256) {
         return transactions.length;
+    }
+    function excos() public view returns(address[] memory){
+        address[] memory all = excoAddresses;
+        return all;
     }
 
 }// ["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4","0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2","0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db"] 
