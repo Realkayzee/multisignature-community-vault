@@ -20,7 +20,6 @@ contract Multisig {
     error _alreadyConfirmed(string);
     error _alreadyExecuted(string);
     error _notApprovedYet(string);
-    error _onlyExco(string);
 
     struct Transaction {
         address exco;
@@ -31,7 +30,6 @@ contract Multisig {
 
     Transaction[] transactions;
     
-    mapping(address => bool) public isExco;
     mapping(address => uint256) landLordBalances;
     mapping(uint256 => mapping(address => bool)) confirmed;
 
@@ -59,7 +57,7 @@ contract Multisig {
         }
         _;
     }
-    modifier checkExco(){
+    modifier checkExco{
         require(onlyExco(), "You are not an exco");
 
         _;
@@ -69,7 +67,6 @@ contract Multisig {
         for(uint256 i = 0; i < excoAddresses.length; i++){
             if(msg.sender == excoAddresses[i]){
                 check = true;
-                break;
             }
         }
     }
@@ -101,8 +98,7 @@ contract Multisig {
     }
 /// @dev function for approving withdrawal
 /// @param _txIndex as the index for each transaction to be approved
-    function approveWithdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
-        // onlyExco(msg.sender);
+    function approveWithdrawal(uint256 _txIndex) public checkExco alreadyExecuted(_txIndex) alreadyConfirmed(_txIndex) {
         confirmed[_txIndex][msg.sender] = true;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation += 1;
@@ -110,8 +106,7 @@ contract Multisig {
 
 /// @dev A function responsible for withdrawal after approval has been confirmed
 /// @param _txIndex is the location of transaction to be withdrawn 
-    function withdrawal(uint256 _txIndex) public alreadyExecuted(_txIndex) {
-        // onlyExco(msg.sender);
+    function withdrawal(uint256 _txIndex) public checkExco alreadyExecuted(_txIndex) {
         uint256 contractBalance = address(this).balance;
         Transaction storage trans = transactions[_txIndex];
         if(trans.noOfConfirmation == excoNumber){
@@ -125,8 +120,7 @@ contract Multisig {
 
 /// @dev Function that handles revertion of approval by excos
 /// @param _txIndex takes in the location of the transaction to be reverted 
-    function revertApproval(uint256 _txIndex) public alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
-        // onlyExco(msg.sender);
+    function revertApproval(uint256 _txIndex) public checkExco alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
         confirmed[_txIndex][msg.sender] = false;
         Transaction storage trans = transactions[_txIndex];
         trans.noOfConfirmation -= 1;
