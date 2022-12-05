@@ -29,7 +29,7 @@ contract Multisig {
     }
 
     Transaction[] transactions;
-    
+
     mapping(address => uint256) landLordBalances;
     mapping(uint256 => mapping(address => bool)) confirmed;
 
@@ -70,7 +70,7 @@ contract Multisig {
             }
         }
     }
-    
+
 /// @dev function responsible for users(Landlord) deposit
     function deposit() public payable {
         require(msg.value > 0, "You must deposit more than 0");
@@ -105,13 +105,13 @@ contract Multisig {
     }
 
 /// @dev A function responsible for withdrawal after approval has been confirmed
-/// @param _txIndex is the location of transaction to be withdrawn 
+/// @param _txIndex is the location of transaction to be withdrawn
     function withdrawal(uint256 _txIndex) public checkExco alreadyExecuted(_txIndex) {
         uint256 contractBalance = address(this).balance;
         Transaction storage trans = transactions[_txIndex];
         if(trans.noOfConfirmation == excoNumber){
             trans.executed = true;
-            contractBalance -= trans.amount; 
+            contractBalance -= trans.amount;
             (bool success, ) = trans.exco.call{ value: trans.amount}("");
             require(success, "Transaction failed");
         }
@@ -119,7 +119,7 @@ contract Multisig {
 
 
 /// @dev Function that handles revertion of approval by excos
-/// @param _txIndex takes in the location of the transaction to be reverted 
+/// @param _txIndex takes in the location of the transaction to be reverted
     function revertApproval(uint256 _txIndex) public checkExco alreadyExecuted(_txIndex) notApprovedYet(_txIndex) {
         confirmed[_txIndex][msg.sender] = false;
         Transaction storage trans = transactions[_txIndex];
